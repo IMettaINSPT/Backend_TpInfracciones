@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 export const connectDB = async () => {
   try {
     console.log("Empiezo en metodo de conexion..");
-    const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/mi-app';
+    const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/infracciones_dev';
     await mongoose.connect(mongoUrl);
     console.log('[Base de Datos] Conectada exitosamente a MongoDB');
   } catch (error) {

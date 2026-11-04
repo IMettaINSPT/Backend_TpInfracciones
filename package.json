@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
-    "dev": "tsx watch src/index.ts",
+    "dev": "dotenv -e .env.development -- tsx watch src/index.ts",
+    "test": "dotenv -e .env.test -- vitest run",
     "start": "tsx src/index.ts",
     "prepare": "husky"
   },
@@ -14,6 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.21.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
