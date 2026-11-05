@@ -9,5 +9,10 @@ dist/
 .env.development
 .env.test
 
+# Logs
+logs/
+*.log
+
+
 # Reportes de testing
 coverage/
