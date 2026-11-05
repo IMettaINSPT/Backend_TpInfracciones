@@ -10,7 +10,10 @@
     "declarationMap": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    /* Chequeo de variables y parámetros no usados */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
 }
