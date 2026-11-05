@@ -1,3 +1,13 @@
+# Dependencias
+node_modules/
+
+# Compilado
+dist/
+
+# Entornos y secretos
+.env
 .env.development
 .env.test
-node_modules/
+
+# Reportes de testing
+coverage/

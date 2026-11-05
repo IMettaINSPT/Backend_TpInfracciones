@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "dotenv -e .env.development -- tsx watch src/index.ts",
     "test": "dotenv -e .env.test -- vitest run",
+    "test:coverage": "dotenv -e .env.test -- vitest run --coverage",
     "start": "tsx src/index.ts",
     "prepare": "husky"
   },
