@@ -8,7 +8,7 @@ const userSchema = new Schema({
         type: String,required: true
     },
     role: {
-        type: String, required: true,enum: ['inspector', 'administrativo'] //segun enunciado son solo dos roles
+        type: String, required: true,enum: ['inspector', 'administrativo', 'admin'] 
     },
     nombre: {
         type: String, required: true,trim: true

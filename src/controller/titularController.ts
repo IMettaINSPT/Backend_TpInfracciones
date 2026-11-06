@@ -1,107 +1,105 @@
 // src/controller/titularController.ts
 import { Request, Response, NextFunction } from 'express';
-import { TitularModel } from '../models/Titular';
-import { registrarAuditoria } from '../services/AuditService';
 import { isValidObjectId } from 'mongoose';
+import { TitularModel } from '../models/Titular';
+import { VehiculoModel } from '../models/Vehiculo';
+import { registrarAuditoria } from '../services/AuditService';
 
-export const crearTitular = async (req: Request, res: Response, next: NextFunction) => {
+export const createTitular = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { esPersonaJuridica = false, cuit, nombre, apellido, dni, domicilio, email, telefono } = req.body;
+    const { esPersonaJuridica, cuit, nombre, apellido, dni, domicilio, email, telefono } = req.body || {};
 
-    if (!nombre || nombre.trim() === '') {
-      if (esPersonaJuridica) return res.status(400).json({ error: 'La razón social es obligatoria' });
-      return res.status(400).json({ error: 'El nombre es obligatorio' });
+    if (!nombre || !domicilio || !email) {
+      return res.status(400).json({ error: 'Nombre, domicilio y email son obligatorios' });
     }
 
-    if (!domicilio || domicilio.trim() === '') {
-      return res.status(400).json({ error: 'El domicilio es obligatorio' });
-    }
-
-    if (!email || email.trim() === '') {
-      return res.status(400).json({ error: 'El email es obligatorio' });
-    }
-
-    if (cuit && cuit.trim() !== '') {
+    if (esPersonaJuridica) {
+      if (!cuit || cuit.trim() === '') {
+        return res.status(400).json({ error: 'El CUIT es obligatorio para personas jurídicas' });
+      }
       const existeCuit = await TitularModel.findOne({ cuit: cuit.trim() });
-      if (existeCuit) return res.status(400).json({ error: 'Ya existe un titular registrado con ese CUIT' });
-    }
-
-    if (dni && dni.trim() !== '') {
+      if (existeCuit) {
+        return res.status(400).json({ error: 'Ya existe un titular registrado con ese CUIT' });
+      }
+    } else {
+      if (!dni || !apellido) {
+        return res.status(400).json({ error: 'DNI y apellido son obligatorios para personas físicas' });
+      }
       const existeDni = await TitularModel.findOne({ dni: dni.trim() });
-      if (existeDni) return res.status(400).json({ error: 'Ya existe un titular registrado con ese DNI' });
+      if (existeDni) {
+        return res.status(400).json({ error: 'Ya existe un titular registrado con ese DNI' });
+      }
     }
 
     const nuevoTitular = await TitularModel.create({
-      esPersonaJuridica,
+      esPersonaJuridica: Boolean(esPersonaJuridica),
       cuit: cuit ? cuit.trim() : undefined,
       nombre: nombre.trim(),
       apellido: apellido ? apellido.trim() : undefined,
       dni: dni ? dni.trim() : undefined,
       domicilio: domicilio.trim(),
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       telefono: telefono ? telefono.trim() : undefined,
     });
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular',
-        entidadId: nuevoTitular._id,
+        entidad: 'Titular' as any,
+        entidadId: nuevoTitular._id.toString(),
         accion: 'CREACION',
         usuarioId: req.user.id,
         datosNuevos: nuevoTitular.toObject(),
+        motivo: `Alta de titular ${nuevoTitular.nombre} ${nuevoTitular.apellido || ''}`,
         ip: req.ip,
       });
     }
 
-    res.status(201).json({ message: 'Titular creado exitosamente', titular: nuevoTitular });
+    res.status(201).json({
+      message: 'Titular registrado exitosamente',
+      titular: nuevoTitular,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-export const obtenerTitulares = async (req: Request, res: Response, next: NextFunction) => {
+export const getTitulares = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const titulares = await TitularModel.find().sort({ createdAt: -1 });
+    const { busqueda, esPersonaJuridica } = req.query;
+    const filtro: Record<string, any> = {};
 
-    if (req.user?.id) {
-      await registrarAuditoria({
-        entidad: 'Titular',
-        entidadId: '000000000000000000000000', // ID neutro o genérico para listar colección
-        accion: 'LECTURA' as any,
-        usuarioId: req.user.id,
-        motivo: `Consulta de listado general de titulares (${titulares.length} registros)`,
-        ip: req.ip,
-      });
+    if (esPersonaJuridica !== undefined) {
+      filtro.esPersonaJuridica = esPersonaJuridica === 'true';
     }
 
+    if (busqueda && typeof busqueda === 'string') {
+      filtro.$or = [
+        { dni: { $regex: busqueda.trim(), $options: 'i' } },
+        { cuit: { $regex: busqueda.trim(), $options: 'i' } },
+        { nombre: { $regex: busqueda.trim(), $options: 'i' } },
+        { apellido: { $regex: busqueda.trim(), $options: 'i' } },
+      ];
+    }
+
+    const titulares = await TitularModel.find(filtro).sort({ createdAt: -1 });
     res.json(titulares);
   } catch (error) {
     next(error);
   }
 };
 
-export const obtenerTitularPorId = async (req: Request, res: Response, next: NextFunction) => {
+export const getTitularById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
-    const titular = await TitularModel.findById(id);
+    const { id } = req.params as { id: string };
 
-    // Si el ID no tiene formato válido de MongoDB, responde 404 directo
     if (!isValidObjectId(id)) {
       return res.status(404).json({ error: 'Titular no encontrado' });
     }
+
+    // Usamos el virtual para traer vehículos asociados
+    const titular = await TitularModel.findById(id).populate('vehiculos');
     if (!titular) {
       return res.status(404).json({ error: 'Titular no encontrado' });
-    }
-
-    if (req.user?.id) {
-      await registrarAuditoria({
-        entidad: 'Titular',
-        entidadId: titular._id,
-        accion: 'LECTURA' as any,
-        usuarioId: req.user.id,
-        motivo: `Consulta individual de titular ${titular.nombre}`,
-        ip: req.ip,
-      });
     }
 
     res.json(titular);
@@ -110,76 +108,82 @@ export const obtenerTitularPorId = async (req: Request, res: Response, next: Nex
   }
 };
 
-export const actualizarTitular = async (req: Request, res: Response, next: NextFunction) => {
+export const updateTitular = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
-    const { domicilio, email, telefono, dni, motivo } = req.body;
+    const { id } = req.params as { id: string };
 
-    const titularOriginal = await TitularModel.findById(id);
-    if (!titularOriginal) {
-      return res.status(404).json({ error: 'Titular no encontrado' });
-    }
-
-    // Si el ID no tiene formato válido de MongoDB, responde 404 directo
     if (!isValidObjectId(id)) {
       return res.status(404).json({ error: 'Titular no encontrado' });
     }
 
-    const snapshotAnterior = titularOriginal.toObject();
+    const titular = await TitularModel.findById(id);
+    if (!titular) {
+      return res.status(404).json({ error: 'Titular no encontrado' });
+    }
 
-    if (domicilio) titularOriginal.domicilio = domicilio;
-    if (email) titularOriginal.email = email;
-    if (telefono) titularOriginal.telefono = telefono;
-    if (dni) titularOriginal.dni = dni;
+    const snapshotAnterior = titular.toObject();
+    const { domicilio, email, telefono, nombre, apellido } = req.body || {};
 
-    const titularActualizado = await titularOriginal.save();
+    if (domicilio) titular.domicilio = domicilio.trim();
+    if (email) titular.email = email.trim().toLowerCase();
+    if (telefono !== undefined) titular.telefono = telefono.trim();
+    if (nombre) titular.nombre = nombre.trim();
+    if (apellido && !titular.esPersonaJuridica) titular.apellido = apellido.trim();
+
+    await titular.save();
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular',
-        entidadId: titularActualizado._id,
+        entidad: 'Titular' as any,
+        entidadId: id,
         accion: 'MODIFICACION',
         usuarioId: req.user.id,
         datosAnteriores: snapshotAnterior,
-        datosNuevos: titularActualizado.toObject(),
-        motivo: motivo || 'Actualización de datos del titular',
+        datosNuevos: titular.toObject(),
+        motivo: `Actualización de datos del titular ${titular.nombre}`,
         ip: req.ip,
       });
     }
 
-    res.json({ message: 'Titular actualizado exitosamente', titular: titularActualizado });
+    res.json({ message: 'Titular actualizado exitosamente', titular });
   } catch (error) {
     next(error);
   }
 };
 
-export const eliminarTitular = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteTitular = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = req.params.id as string;
-    const { motivo } = req.body || {};
-    
+    const { id } = req.params as { id: string };
 
     if (!isValidObjectId(id)) {
       return res.status(404).json({ error: 'Titular no encontrado' });
     }
-    
-    const titularOriginal = await TitularModel.findById(id);
-    if (!titularOriginal) {
+
+    // Control de integridad: no borrar si tiene vehículos vigentes
+    const vehiculosAsociados = await VehiculoModel.countDocuments({
+      'titulares.titular': id,
+      'titulares.fechaBajaRegistro': { $exists: false },
+    });
+
+    if (vehiculosAsociados > 0) {
+      return res.status(400).json({
+        error: 'No se puede eliminar el titular: posee vehículos activos vinculados a su nombre',
+      });
+    }
+
+    const titular = await TitularModel.findByIdAndDelete(id);
+    if (!titular) {
       return res.status(404).json({ error: 'Titular no encontrado' });
     }
 
-    const snapshotAnterior = titularOriginal.toObject();
-
-    await TitularModel.findByIdAndDelete(id);
-
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular',
-        entidadId: id, 
+        entidad: 'Titular' as any,
+        entidadId: id,
         accion: 'ELIMINACION',
         usuarioId: req.user.id,
-        datosAnteriores: snapshotAnterior,
-        motivo: motivo || 'Baja definitiva de titular',
+        datosAnteriores: titular.toObject(),
+        motivo: `Baja de titular ${titular.nombre}`,
         ip: req.ip,
       });
     }
@@ -188,4 +192,69 @@ export const eliminarTitular = async (req: Request, res: Response, next: NextFun
   } catch (error) {
     next(error);
   }
-};  
+};
+
+export const closeTitularidad = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id, vehiculoId } = req.params as { id: string; vehiculoId: string };
+    const { motivo } = req.body || {};
+
+    if (!isValidObjectId(id) || !isValidObjectId(vehiculoId)) {
+      return res.status(400).json({ error: 'IDs de titular o vehículo inválidos' });
+    }
+
+    const [titular, vehiculo] = await Promise.all([
+      TitularModel.findById(id),
+      VehiculoModel.findById(vehiculoId),
+    ]);
+
+    if (!titular) {
+      return res.status(404).json({ error: 'Titular no encontrado' });
+    }
+
+    if (!vehiculo) {
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    // Buscamos la asignación activa en el vehículo
+    const registroTitularidad = vehiculo.titulares.find(
+      (t: any) => t.titular.toString() === id && !t.fechaBajaRegistro
+    );
+
+    if (!registroTitularidad) {
+      return res.status(400).json({
+        error: 'El titular no figura como titular vigente de este vehículo',
+      });
+    }
+
+    const snapshotAnterior = vehiculo.toObject();
+
+    // Seteamos la fecha de baja en el subdocumento del vehículo
+    registroTitularidad.fechaBajaRegistro = new Date();
+
+    await vehiculo.save();
+
+    if (req.user?.id) {
+      await registrarAuditoria({
+        entidad: 'Titular' as any,
+        entidadId: id,
+        accion: 'MODIFICACION',
+        usuarioId: req.user.id,
+        datosAnteriores: snapshotAnterior,
+        datosNuevos: vehiculo.toObject(),
+        motivo: motivo || `Cesión/Baja de titularidad sobre vehículo patente ${vehiculo.patente}`,
+        ip: req.ip,
+      });
+    }
+
+    res.json({
+      message: 'Baja de titularidad procesada exitosamente',
+      vehiculoId: vehiculo._id,
+      patente: vehiculo.patente,
+      titularId: titular._id,
+      fechaBajaRegistro: registroTitularidad.fechaBajaRegistro,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

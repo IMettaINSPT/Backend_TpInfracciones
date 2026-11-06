@@ -6,19 +6,17 @@ import { beforeAll, afterAll, afterEach } from 'vitest';
 let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
-  // 1. Levantar la instancia en memoria
+  // Le damos hasta 60s para descargar/iniciar el binario en Windows
   mongo = await MongoMemoryServer.create();
   const uri = mongo.getUri();
 
-  // 2. Asignar la URI en memoria a las variables de entorno para que la app la use
   process.env.MONGO_URI = uri;
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'secreto_testing_123';
 
-  // 3. Conectar Mongoose a esa URI temporal
   await mongoose.connect(uri);
-});
+}, 60000);
 
 afterEach(async () => {
-  // Limpiar las colecciones después de cada test para mantenerlos aislados
   const collections = mongoose.connection.collections;
   for (const key in collections) {
     await collections[key].deleteMany({});
@@ -27,5 +25,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongo.stop();
+  if (mongo) {
+    await mongo.stop();
+  }
 });

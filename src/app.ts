@@ -2,10 +2,12 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { logger } from './middleware/logger';
 import { errorHandler } from './middleware/errorHandler';
-import userRouter from './routes/UserRouter';
-import authRouter from './routes/authRoutes';
-import auditRouter from './routes/auditRoutes';
-import titularRouter from './routes/titularRoutes';
+import userRouter from './routes/UserRoute';
+import authRouter from './routes/authRoute';
+import auditRouter from './routes/auditRoute';
+import titularRouter from './routes/titularRoute';
+import infraccionRouter from './routes/infraccionRoute';
+import vehiculoRouter from './routes/vehiculoRoute';
 
 const app = express();
 
@@ -24,9 +26,10 @@ app.use('/auth', authRouter);
 app.use('/users', userRouter);
 app.use('/audit', auditRouter);
 app.use('/titulares', titularRouter);
+app.use('/infracciones', infraccionRouter);
+app.use('/vehiculos', vehiculoRouter);
 
-
-// 3. Manejador de errores centralizado (va SIEMPRE al final, después de las rutas)
+// 3. Manejador de errores centralizado
  app.use(errorHandler);
 
 export default app;

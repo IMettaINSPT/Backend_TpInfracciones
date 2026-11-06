@@ -1,80 +1,52 @@
 // test/auth.test.ts
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../src/app';
-import { UserModel } from '../src/models/User';
-import bcrypt from 'bcrypt';
+import { setupTestAuth, TestAuthContext } from './helpers/auth.helper';
 
-describe('Autenticación y Gestión de Usuarios', () => {
-  let adminToken: string;
+describe('Autenticación y Login - Tests de Integración', () => {
+  let auth: TestAuthContext;
+  const SEED_EMAIL = (process.env.SEED_ADMIN_EMAIL || 'admin@infracciones.gob.ar').toLowerCase();
 
-  // Re-creamos el admin y regeneramos el token antes de cada test para que
-  // el afterEach de setup.ts (que vacía la base en memoria) no lo elimine
   beforeEach(async () => {
-    await UserModel.deleteMany({});
-    const hashedPassword = await bcrypt.hash('Admin123!', 10);
-
-    await UserModel.create({
-      email: 'admin_test@api.com',
-      password: hashedPassword,
-      role: 'administrativo',
-      nombre: 'Admin Test',
-    });
-
-    const loginRes = await request(app)
-      .post('/auth/login')
-      .send({
-        email: 'admin_test@api.com',
-        password: 'Admin123!',
-      });
-
-    adminToken = loginRes.body.token;
+    //centralizo la creación de tokens y usuarios de prueba para los distintos roles, para no repetir código en cada test
+    auth = await setupTestAuth();
   });
 
-  // 1. Login exitoso -> POST /auth/login
-  it('POST /auth/login con credenciales válidas debe responder 200 y devolver un token JWT', async () => {
-    const response = await request(app)
+  it('POST /auth/login con credenciales correctas debe responder 200 y devolver un JWT válido', async () => {
+    const res = await request(app)
       .post('/auth/login')
       .send({
-        email: 'admin_test@api.com',
-        password: 'Admin123!',
+        email: SEED_EMAIL,
+        password: 'Password123!', // Clave generada por el helper
       });
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('token');
-    expect(typeof response.body.token).toBe('string');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
+    expect(typeof res.body.token).toBe('string');
   });
 
-  // 2. Login inválido -> POST /auth/login
   it('POST /auth/login con contraseña incorrecta debe responder 401', async () => {
-    const response = await request(app)
+    const res = await request(app)
       .post('/auth/login')
       .send({
-        email: 'admin_test@api.com',
-        password: 'PasswordFalsa',
+        email: SEED_EMAIL,
+        password: 'PasswordErronea123!',
       });
 
-    expect(response.status).toBe(401);
-    expect(response.body).toHaveProperty('error');
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error');
   });
 
-  // 3. Crear usuario (admin) -> POST /users
-  it('POST /users debe permitir a un admin crear un nuevo usuario (inspector)', async () => {
-    const newUser = {
-      email: 'inspector_nuevo@api.com',
-      password: 'Inspector123!',
-      role: 'inspector',
-      nombre: 'Juan Inspector',
-    };
+  it('POST /auth/login con usuario que no existe debe responder 401', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({
+        email: 'noexiste@infracciones.gob.ar',
+        password: 'Password123!',
+      });
 
-    const response = await request(app)
-      .post('/users')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send(newUser);
-
-    expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('message', 'Usuario creado exitosamente');
-    expect(response.body.user).toHaveProperty('email', newUser.email);
-    expect(response.body.user).not.toHaveProperty('password');
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error');
   });
 });
