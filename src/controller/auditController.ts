@@ -31,7 +31,7 @@ export const obtenerHistorialPorFiltro = async (req: Request, res: Response, nex
     }
 
     const logs = await AuditLogModel.find(filtro)
-      .populate('usuario', 'nombre email role')
+      .populate('usuarioId', 'nombre email role')
       .sort({ createdAt: -1 });
 
     res.json(logs);
@@ -46,7 +46,7 @@ export const obtenerHistorialPorEntidadId = async (req: Request, res: Response, 
     const { entidad, id } = req.params;
 
     const logs = await AuditLogModel.find({ entidad: entidad as any, entidadId: id })
-      .populate('usuario', 'nombre email role')
+      .populate('usuarioId', 'nombre email role')
       .sort({ createdAt: -1 });
 
     res.json(logs);
@@ -65,7 +65,7 @@ export const obtenerTodosLosLogs = async (req: Request, res: Response, next: Nex
     if (entidad) filtro.entidad = entidad;
 
     const logs = await AuditLogModel.find(filtro)
-      .populate('usuario', 'nombre email role')
+      .populate('usuarioId', 'nombre email role')
       .sort({ createdAt: -1 })
       .limit(100);
 

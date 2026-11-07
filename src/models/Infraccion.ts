@@ -24,8 +24,6 @@ const infraccionSchema = new Schema(
 );
 
 infraccionSchema.index({ vehiculo: 1 });
-infraccionSchema.index({ numeroActa: 1 });
-infraccionSchema.index({ codigoBarras: 1 });
 infraccionSchema.index({ estado: 1 });
 
 export type Infraccion = InferSchemaType<typeof infraccionSchema>;

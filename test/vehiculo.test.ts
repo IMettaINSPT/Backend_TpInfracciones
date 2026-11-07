@@ -1,3 +1,4 @@
+// test/vehiculo.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../src/app';
@@ -129,7 +130,6 @@ describe('Entidad Vehiculo - Tests de Integración', () => {
         .set('Authorization', `Bearer ${auth.inspectorToken}`);
 
       expect(res.status).toBe(404);
-      // Mensaje exacto de tu vehiculoController.ts
       expect(res.body.error).toBe('Vehículo no encontrado para la patente especificada');
     });
   });
@@ -239,6 +239,59 @@ describe('Entidad Vehiculo - Tests de Integración', () => {
 
       const borrado = await VehiculoModel.findById(vehiculoLimpio._id);
       expect(borrado).toBeNull();
+    });
+  });
+
+  describe('Consultas generales y Actualización de Vehículos', () => {
+    it('GET /vehiculos debe permitir listar vehículos y filtrar por marca o búsqueda', async () => {
+      const res = await request(app)
+        .get('/vehiculos?marca=Toyota&busqueda=Corolla')
+        .set('Authorization', `Bearer ${auth.administrativoToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it('GET /vehiculos/:id debe devolver el vehículo o 404 si no existe', async () => {
+      const vehiculo = await VehiculoModel.create({
+        patente: 'AA111BB',
+        marca: 'Fiat',
+        modelo: 'Palio',
+        anio: 2015,
+      });
+
+      const res = await request(app)
+        .get(`/vehiculos/${vehiculo._id}`)
+        .set('Authorization', `Bearer ${auth.administrativoToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.patente).toBe('AA111BB');
+
+      const resNotFound = await request(app)
+        .get('/vehiculos/6aee23cefce8fbbf4e7fe399')
+        .set('Authorization', `Bearer ${auth.administrativoToken}`);
+      expect(resNotFound.status).toBe(404);
+    });
+
+    it('PUT /vehiculos/:id debe permitir actualizar los datos del vehículo (200)', async () => {
+      const vehiculo = await VehiculoModel.create({
+        patente: 'BB222CC',
+        marca: 'Chevrolet',
+        modelo: 'Onix',
+        anio: 2019,
+      });
+
+      const res = await request(app)
+        .put(`/vehiculos/${vehiculo._id}`)
+        .set('Authorization', `Bearer ${auth.adminToken}`)
+        .send({
+          marca: 'Chevrolet',
+          modelo: 'Onix Plus',
+          anio: 2020,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.vehiculo.modelo).toBe('Onix Plus');
     });
   });
 });
