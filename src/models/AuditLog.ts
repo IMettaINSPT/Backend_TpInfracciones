@@ -6,7 +6,7 @@ const auditLogSchema = new Schema(
     entidad: {
       type: String,
       required: true,
-      enum: ['Usuario', 'User', 'Titular', 'Vehiculo', 'Infraccion'],
+      enum: ['Usuario', 'User', 'Titular', 'Vehiculo', 'Infraccion','Pago'],
     },
     entidadId: {
       type: String,

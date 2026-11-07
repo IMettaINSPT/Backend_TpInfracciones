@@ -1,9 +1,9 @@
 // src/services/AuditService.ts
 import { AuditLogModel } from '../models/AuditLog';
 
-export type EntidadAuditable = 'Usuario' | 'User' | 'Titular' | 'Vehiculo' | 'Infraccion';
 export type AccionAuditable = 'CREACION' | 'MODIFICACION' | 'ELIMINACION' | 'CAMBIO_ESTADO';
 
+export type EntidadAuditable = 'Usuario' | 'User' | 'Titular' | 'Vehiculo' | 'Infraccion' | 'Pago';
 export interface RegistrarAuditoriaParams {
   entidad: EntidadAuditable;
   entidadId: string;
