@@ -10,7 +10,7 @@ describe('Autenticación y Login - Tests de Integración', () => {
 
   beforeEach(async () => {
     //centralizo la creación de tokens y usuarios de prueba para los distintos roles, para no repetir código en cada test
-    auth = await setupTestAuth();
+    await setupTestAuth();
   });
 
   it('POST /auth/login con credenciales correctas debe responder 200 y devolver un JWT válido', async () => {

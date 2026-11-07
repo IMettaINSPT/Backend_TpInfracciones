@@ -8,6 +8,7 @@ import auditRouter from './routes/auditRoute';
 import titularRouter from './routes/titularRoute';
 import infraccionRouter from './routes/infraccionRoute';
 import vehiculoRouter from './routes/vehiculoRoute';
+import pagoRouter from './routes/pagoRoute';
 
 const app = express();
 
@@ -28,6 +29,8 @@ app.use('/audit', auditRouter);
 app.use('/titulares', titularRouter);
 app.use('/infracciones', infraccionRouter);
 app.use('/vehiculos', vehiculoRouter);
+app.use('/pagos', pagoRouter);
+
 
 // 3. Manejador de errores centralizado
  app.use(errorHandler);

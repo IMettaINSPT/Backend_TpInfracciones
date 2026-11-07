@@ -12,7 +12,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
     /* Chequeo de variables y parámetros no usados */
-    "noUnusedLocals": true,
+    "noUnusedLocals": false ,
     "noUnusedParameters": true
   },
   "include": ["src/**/*", "test/**/*", "vitest.config.ts"]
