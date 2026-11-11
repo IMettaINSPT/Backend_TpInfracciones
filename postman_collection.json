@@ -1,0 +1,306 @@
+{
+  "info": {
+    "name": "Sistema de Gestión de Infracciones - API",
+    "description": "Colección completa de endpoints para el Trabajo Práctico de Programación 3. Incluye autenticación JWT, RBAC por roles y manejo estricto de ObjectId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación",
+      "item": [
+        {
+          "name": "Login Administrativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('token', data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@infracciones.gob.ar\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Titulares",
+      "item": [
+        {
+          "name": "Listar Titulares",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/titulares?busqueda=Carlos",
+              "host": ["{{baseUrl}}"],
+              "path": ["titulares"],
+              "query": [{ "key": "busqueda", "value": "Carlos" }]
+            }
+          }
+        },
+        {
+          "name": "Crear Titular (Persona Física)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"esPersonaJuridica\": false,\n  \"cuit\": \"20-30111222-7\",\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Pérez\",\n  \"dni\": \"30111222\",\n  \"domicilio\": \"Av. Corrientes 1234\",\n  \"email\": \"carlos.perez@test.com\",\n  \"telefono\": \"1144556677\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/titulares", "host": ["{{baseUrl}}"], "path": ["titulares"] }
+          }
+        },
+        {
+          "name": "Actualizar Domicilio/Contacto Titular",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"domicilio\": \"Av. San Martín 450\",\n  \"telefono\": \"1199887766\",\n  \"motivo\": \"Actualización de domicilio legal\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/titulares/:id", "host": ["{{baseUrl}}"], "path": ["titulares", ":id"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vehículos",
+      "item": [
+        {
+          "name": "Consultar por Patente (Inspectores y Administrativos)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/vehiculos/patente/AA123BB", "host": ["{{baseUrl}}"], "path": ["vehiculos", "patente", "AA123BB"] }
+          }
+        },
+        {
+          "name": "Alta de Vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patente\": \"AA123BB\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Cronos\",\n  \"anio\": 2023,\n  \"titular\": \"65f1a2b3c4d5e6f7a8b9c0d1\",\n  \"porcentajeTitularidad\": 100\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vehiculos", "host": ["{{baseUrl}}"], "path": ["vehiculos"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Infracciones",
+      "item": [
+        {
+          "name": "Labrar Acta (Inspector)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehiculo\": \"65f1a2b3c4d5e6f7a8b9c0d1\",\n  \"tipoFalta\": \"Exceso de velocidad\",\n  \"lugar\": \"Av. Libertador 4500\",\n  \"monto\": 25000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/infracciones", "host": ["{{baseUrl}}"], "path": ["infracciones"] }
+          }
+        },
+        {
+          "name": "Consultar por Código de Barras",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/infracciones/codigo/:codigoBarras", "host": ["{{baseUrl}}"], "path": ["infracciones", "codigo", ":codigoBarras"] }
+          }
+        },
+        {
+          "name": "Registrar Descargo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivoDescargo\": \"Presenta constancia médica por urgencia hospitalaria\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/infracciones/:id/descargo", "host": ["{{baseUrl}}"], "path": ["infracciones", ":id", "descargo"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Pagos Online",
+      "item": [
+        {
+          "name": "Registrar Pago con Tarjeta",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"infraccionesIds\": [\"65f1a2b3c4d5e6f7a8b9c0d2\"],\n  \"medioPago\": \"tarjeta\",\n  \"datosTarjeta\": {\n    \"tipoTarjeta\": \"debito\",\n    \"emisor\": \"visa\",\n    \"nombreTitular\": \"CARLOS PEREZ\",\n    \"numeroTarjeta\": \"4500123456784321\",\n    \"mesExpiracion\": \"12\",\n    \"anioExpiracion\": \"2028\"\n  },\n  \"pagador\": {\n    \"nombreCompleto\": \"Carlos Pérez\",\n    \"dniCuit\": \"30111222\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/pagos", "host": ["{{baseUrl}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Registrar Pago con Billetera Virtual",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"infraccionesIds\": [\"65f1a2b3c4d5e6f7a8b9c0d2\"],\n  \"medioPago\": \"billetera_virtual\",\n  \"datosBilletera\": {\n    \"proveedor\": \"mercadopago\",\n    \"idTransaccionExterna\": \"MP-9988776655\",\n    \"tipoPago\": \"account_money\",\n    \"montoNetoRecibido\": 24000,\n    \"comisionPasarela\": 1000,\n    \"emailPagadorPasarela\": \"carlos@mercadopago.com\"\n  },\n  \"pagador\": {\n    \"nombreCompleto\": \"Carlos Pérez\",\n    \"dniCuit\": \"30111222\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/pagos", "host": ["{{baseUrl}}"], "path": ["pagos"] }
+          }
+        },
+        {
+          "name": "Listar Pagos con Filtros",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/pagos?comprobante=REC-2026&medioPago=billetera_virtual&fechaDesde=2026-01-01&fechaHasta=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["pagos"],
+              "query": [
+                { "key": "comprobante", "value": "REC-2026" },
+                { "key": "medioPago", "value": "billetera_virtual" },
+                { "key": "fechaDesde", "value": "2026-01-01" },
+                { "key": "fechaHasta", "value": "2026-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Anular Pago y Revertir Actas (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Contracargo bancario informado por la pasarela de pagos\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/pagos/:id/anular", "host": ["{{baseUrl}}"], "path": ["pagos", ":id", "anular"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Panel y Métricas",
+      "item": [
+        {
+          "name": "Consultar Deuda por Patente",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/panel/deuda/patente/AA123BB", "host": ["{{baseUrl}}"], "path": ["panel", "deuda", "patente", "AA123BB"] }
+          }
+        },
+        {
+          "name": "Consultar Deuda Consolidada por Titular",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/panel/deuda/titular/:titularId", "host": ["{{baseUrl}}"], "path": ["panel", "deuda", "titular", ":titularId"] }
+          }
+        },
+        {
+          "name": "Métricas y Recaudación del Período",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/panel/metricas?fechaDesde=2026-01-01&fechaHasta=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["panel", "metricas"],
+              "query": [
+                { "key": "fechaDesde", "value": "2026-01-01" },
+                { "key": "fechaHasta", "value": "2026-12-31" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Auditoría",
+      "item": [
+        {
+          "name": "Consultar Historial con Filtros",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/audit?entidad=Pago&fechaDesde=2026-01-01&fechaHasta=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit"],
+              "query": [
+                { "key": "entidad", "value": "Pago" },
+                { "key": "fechaDesde", "value": "2026-01-01" },
+                { "key": "fechaHasta", "value": "2026-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar Historial de un Recurso Puntual",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/audit/:entidad/:id", "host": ["{{baseUrl}}"], "path": ["audit", ":entidad", ":id"] }
+          }
+        }
+      ]
+    }
+  ]
+}
