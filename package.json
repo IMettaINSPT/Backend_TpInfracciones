@@ -8,7 +8,9 @@
     "test": "dotenv -e .env.test -- vitest run",
     "test:coverage": "dotenv -e .env.test -- vitest run --coverage",
     "start": "tsx src/index.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build": "tsc",
+    "check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

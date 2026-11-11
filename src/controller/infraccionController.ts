@@ -1,11 +1,11 @@
 // src/controller/infraccionController.ts
 import { Request, Response, NextFunction } from 'express';
-import { isValidObjectId } from 'mongoose';
+import { isValidObjectId, Types } from 'mongoose';
 import { InfraccionModel } from '../models/Infraccion';
 import { VehiculoModel } from '../models/Vehiculo';
 import { registrarAuditoria } from '../services/AuditService';
 
-// Obtengo codigo de barra y numero unico de aca
+// Generador de identificadores únicos para el acta y código de barras
 const getIdentifieres = (monto: number) => {
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.floor(1000 + Math.random() * 9000);
@@ -59,7 +59,7 @@ export const generarInfraccion = async (req: Request, res: Response, next: NextF
         entidad: 'Infraccion',
         entidadId: nuevaInfraccion._id.toString(),
         accion: 'CREACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosNuevos: nuevaInfraccion.toObject(),
         motivo: `Labrado de acta N° ${numeroActa}`,
         ip: req.ip,
@@ -118,8 +118,8 @@ export const generarDescargo = async (req: Request, res: Response, next: NextFun
       await registrarAuditoria({
         entidad: 'Infraccion',
         entidadId: acta._id.toString(),
-        accion: 'CAMBIO_ESTADO' as any,
-        usuarioId: req.user.id,
+        accion: 'CAMBIO_ESTADO',
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: acta.toObject(),
         motivo: `Descargo interpuesto por el titular: ${motivoDescargo.trim()}`,
@@ -133,7 +133,7 @@ export const generarDescargo = async (req: Request, res: Response, next: NextFun
   }
 };
 
-// 3. PUT /infracciones/:id/anular -> Anulación de Acta (Exclusivo administrativo / juez)
+// 3. PUT /infracciones/:id/anular -> Anulación de Acta (Exclusivo administrativo)
 export const anularInfraccion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -165,8 +165,8 @@ export const anularInfraccion = async (req: Request, res: Response, next: NextFu
       await registrarAuditoria({
         entidad: 'Infraccion',
         entidadId: acta._id.toString(),
-        accion: 'CAMBIO_ESTADO' as any,
-        usuarioId: req.user.id,
+        accion: 'CAMBIO_ESTADO',
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: acta.toObject(),
         motivo: `Anulación de acta: ${motivo.trim()}`,
@@ -209,7 +209,7 @@ export const obtenerInfraccionPorId = async (req: Request, res: Response, next: 
   }
 };
 
-// 5. GET /infracciones/codigo/:codigo -> Búsqueda rápida por código de barras (caja/ventanilla)
+// 5. GET /infracciones/codigo/:codigo -> Búsqueda rápida por código de barras
 export const obtenerInfraccionPorCodigoBarras = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const codigoParam = req.params.codigo;

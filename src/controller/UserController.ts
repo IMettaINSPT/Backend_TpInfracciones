@@ -1,7 +1,7 @@
 // src/controller/user.controller.ts
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
-import { isValidObjectId } from 'mongoose';
+import { isValidObjectId , Types} from 'mongoose';
 import { UserModel } from '../models/User';
 import { registrarAuditoria } from '../services/AuditService';
 
@@ -43,10 +43,10 @@ export const crearUsuario = async (req: Request, res: Response, next: NextFuncti
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Usuario' as any,
+        entidad: 'Usuario' ,
         entidadId: newUser._id.toString(),
         accion: 'CREACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosNuevos: { email: newUser.email, role: newUser.role, nombre: newUser.nombre },
         motivo: `Alta de usuario con rol ${newUser.role}`,
         ip: req.ip,
@@ -106,10 +106,10 @@ export const eliminarUsuario = async (req: Request, res: Response, next: NextFun
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Usuario' as any,
+        entidad: 'Usuario' ,
         entidadId: id,
         accion: 'ELIMINACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         motivo: motivo || `Baja del usuario ${usuario.email}`,
         ip: req.ip,
@@ -155,10 +155,10 @@ export const actualizarRolUsuario = async (req: Request, res: Response, next: Ne
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Usuario' as any,
+        entidad: 'Usuario' ,
         entidadId: id,
         accion: 'MODIFICACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: usuario.toObject(),
         motivo: motivo || `Actualización de rol a "${role}" para el usuario ${usuario.email}`,

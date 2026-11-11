@@ -1,7 +1,7 @@
-// src/models/Infraccion.ts
-import { Schema, model, InferSchemaType } from 'mongoose';
+import { Schema, model } from 'mongoose';
+import { IInfraccion } from '../types';
 
-const infraccionSchema = new Schema(
+const infraccionSchema = new Schema<IInfraccion>(
   {
     numeroActa: { type: String, required: true, unique: true, uppercase: true, trim: true },
     codigoBarras: { type: String, required: true, unique: true, trim: true },
@@ -26,5 +26,4 @@ const infraccionSchema = new Schema(
 infraccionSchema.index({ vehiculo: 1 });
 infraccionSchema.index({ estado: 1 });
 
-export type Infraccion = InferSchemaType<typeof infraccionSchema>;
-export const InfraccionModel = model('Infraccion', infraccionSchema);
+export const InfraccionModel = model<IInfraccion>('Infraccion', infraccionSchema);

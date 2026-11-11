@@ -4,6 +4,9 @@ import { VehiculoModel } from '../models/Vehiculo';
 import { TitularModel } from '../models/Titular';
 import { InfraccionModel } from '../models/Infraccion';
 import { registrarAuditoria } from '../services/AuditService';
+import { ITitularVinculado } from '../types';
+import { Types } from 'mongoose';
+
 
 export const createVehiculo = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -51,7 +54,7 @@ export const createVehiculo = async (req: Request, res: Response, next: NextFunc
         entidad: 'Vehiculo' as any,
         entidadId: nuevoVehiculo._id.toString(),
         accion: 'CREACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosNuevos: nuevoVehiculo.toObject(),
         motivo: `Alta de vehículo dominio ${patenteNormalizada}`,
         ip: req.ip,
@@ -177,7 +180,7 @@ export const updateVehiculo = async (req: Request, res: Response, next: NextFunc
         entidad: 'Vehiculo' as any,
         entidadId: id,
         accion: 'MODIFICACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: vehiculo.toObject(),
         motivo: `Actualización de datos del vehículo ${vehiculo.patente}`,
@@ -232,7 +235,7 @@ export const addTitularVehiculo = async (req: Request, res: Response, next: Next
         entidad: 'Vehiculo' as any,
         entidadId: id,
         accion: 'MODIFICACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: vehiculo.toObject(),
         motivo: `Asignación de titular ${titular.nombre} al vehículo ${vehiculo.patente}`,
@@ -272,7 +275,7 @@ export const deleteVehiculo = async (req: Request, res: Response, next: NextFunc
         entidad: 'Vehiculo' as any,
         entidadId: id,
         accion: 'ELIMINACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: vehiculo.toObject(),
         motivo: `Baja de vehículo patente ${vehiculo.patente}`,
         ip: req.ip,

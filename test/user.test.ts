@@ -43,7 +43,7 @@ describe('ABM de Usuarios - Tests de Integración', () => {
 
       const guardado = await UserModel.findOne({ email: payload.email });
       expect(guardado).not.toBeNull();
-      const coincidePassword = await bcrypt.compare(payload.password, guardado!.password);
+      const coincidePassword = await bcrypt.compare(payload.password, guardado!.password!);
       expect(coincidePassword).toBe(true);
     });
 

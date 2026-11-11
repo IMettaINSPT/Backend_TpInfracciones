@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import { Role } from '../types';
 
-// acceso a todo el sistema  +  abm usuario
 export const requireAdminRole = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Acceso denegado: Se requiere rol de Administrador' });
@@ -22,8 +22,7 @@ export const requireAdministrativeRole = (req: Request, res: Response, next: Nex
   next();
 };
 
-//en caso de querer validar varios roles, para que cada funcion de rol quede limpia
-export const requireRoles = (rolesPermitidos: Array<'inspector' | 'administrativo' | 'admin'>) => {
+export const requireRoles = (rolesPermitidos: Role[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !rolesPermitidos.includes(req.user.role)) {
       return res.status(403).json({ error: 'Acceso denegado: Permisos insuficientes' });

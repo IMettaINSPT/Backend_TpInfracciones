@@ -1,9 +1,10 @@
 // src/controller/titularController.ts
 import { Request, Response, NextFunction } from 'express';
-import { isValidObjectId } from 'mongoose';
+import { isValidObjectId, Types } from 'mongoose';
 import { TitularModel } from '../models/Titular';
 import { VehiculoModel } from '../models/Vehiculo';
 import { registrarAuditoria } from '../services/AuditService';
+
 
 export const createTitular = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -44,10 +45,10 @@ export const createTitular = async (req: Request, res: Response, next: NextFunct
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular' as any,
+        entidad: 'Titular',
         entidadId: nuevoTitular._id.toString(),
         accion: 'CREACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosNuevos: nuevoTitular.toObject(),
         motivo: `Alta de titular ${nuevoTitular.nombre} ${nuevoTitular.apellido || ''}`,
         ip: req.ip,
@@ -134,10 +135,10 @@ export const updateTitular = async (req: Request, res: Response, next: NextFunct
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular' as any,
+        entidad: 'Titular',
         entidadId: id,
         accion: 'MODIFICACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: titular.toObject(),
         motivo: `Actualización de datos del titular ${titular.nombre}`,
@@ -178,10 +179,10 @@ export const deleteTitular = async (req: Request, res: Response, next: NextFunct
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular' as any,
+        entidad: 'Titular',
         entidadId: id,
         accion: 'ELIMINACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: titular.toObject(),
         motivo: `Baja de titular ${titular.nombre}`,
         ip: req.ip,
@@ -236,10 +237,10 @@ export const closeTitularidad = async (req: Request, res: Response, next: NextFu
 
     if (req.user?.id) {
       await registrarAuditoria({
-        entidad: 'Titular' as any,
+        entidad: 'Titular',
         entidadId: id,
         accion: 'MODIFICACION',
-        usuarioId: req.user.id,
+        usuarioId: new Types.ObjectId(req.user.id),
         datosAnteriores: snapshotAnterior,
         datosNuevos: vehiculo.toObject(),
         motivo: motivo || `Cesión/Baja de titularidad sobre vehículo patente ${vehiculo.patente}`,

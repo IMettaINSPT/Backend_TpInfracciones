@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { isValidObjectId } from 'mongoose';
 import { PanelService } from '../services/PanelService'; // Con P mayúscula coincidente con el archivo físico
+import { IFiltroPeriodo } from '../types';
 
 export const getDeudaPatente = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -40,11 +41,20 @@ export const getMetricasPanel = async (req: Request, res: Response, next: NextFu
   try {
     const { fechaDesde, fechaHasta } = req.query;
 
-    const metricas = await PanelService.obtenerMetricasPeriodo({
-      fechaDesde: fechaDesde as string,
-      fechaHasta: fechaHasta as string,
-    });
+    const filtro: IFiltroPeriodo = {};
 
+    // como me llega como string , lo convierto a date
+    if (fechaDesde && typeof fechaDesde === 'string') {
+      filtro.fechaDesde = new Date(fechaDesde);
+    }
+
+    if (fechaHasta && typeof fechaHasta === 'string') {
+      const hasta = new Date(fechaHasta);
+      hasta.setHours(23, 59, 59, 999); // Incluir todo el día
+      filtro.fechaHasta = hasta;
+    }
+
+    const metricas = await PanelService.obtenerMetricasPeriodo(filtro);
     res.json(metricas);
   } catch (error) {
     next(error);

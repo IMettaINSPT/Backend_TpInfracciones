@@ -1,6 +1,7 @@
 // src/controller/auditController.ts
 import { Request, Response, NextFunction } from 'express';
 import { AuditLogModel } from '../models/AuditLog';
+import { EntidadAuditable } from '../types';
 
 // 1. Historial por rango de fechas y entidad (para reportes o filtros generales)
 export const obtenerHistorialPorFiltro = async (req: Request, res: Response, next: NextFunction) => {
@@ -45,7 +46,7 @@ export const obtenerHistorialPorEntidadId = async (req: Request, res: Response, 
   try {
     const { entidad, id } = req.params;
 
-    const logs = await AuditLogModel.find({ entidad: entidad as any, entidadId: id })
+    const logs = await AuditLogModel.find({ entidad: entidad as EntidadAuditable, entidadId: id })
       .populate('usuarioId', 'nombre email role')
       .sort({ createdAt: -1 });
 

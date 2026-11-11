@@ -1,17 +1,13 @@
+// src/services/PanelService.ts
 import { Types } from 'mongoose';
 import { InfraccionModel } from '../models/Infraccion';
 import { VehiculoModel } from '../models/Vehiculo';
 import { PagoModel } from '../models/Pago';
-
-export interface FiltroPeriodo {
-  fechaDesde?: string | Date;
-  fechaHasta?: string | Date;
-}
+import { IFiltroPeriodo } from '../types';
 
 export class PanelService {
-  /**
-   * 1. Cálculo de deuda exigible por patente/vehículo
-   */
+ 
+
   static async obtenerDeudaPorPatente(patente: string) {
     const vehiculo = await VehiculoModel.findOne({ patente: patente.trim().toUpperCase() });
     if (!vehiculo) {
@@ -21,7 +17,7 @@ export class PanelService {
     const resultado = await InfraccionModel.aggregate([
       {
         $match: {
-          vehiculo: vehiculo._id,
+          vehiculo: vehiculo._id, // Ya es un Types.ObjectId
           estado: { $in: ['pendiente', 'notificada', 'en descargo'] },
         },
       },
@@ -56,23 +52,20 @@ export class PanelService {
     };
   }
 
-  /**
-   * 2. Cálculo de deuda consolidada por titular
-   */
-  static async obtenerDeudaPorTitular(titularId: string) {
-    const objectId = new Types.ObjectId(titularId);
+  static async obtenerDeudaPorTitular(titularId: string | Types.ObjectId) {
+    const objectIdTitular = typeof titularId === 'string' ? new Types.ObjectId(titularId) : titularId;
 
-    // Buscar rodados donde el titular esté activo
+    // Buscar rodados donde el titular esté activo (sin fecha de baja)
     const vehiculos = await VehiculoModel.find({
-      'titulares.titular': objectId,
+      'titulares.titular': objectIdTitular,
       'titulares.fechaBajaRegistro': { $exists: false },
     }).select('_id patente marca modelo');
 
-    const vehiculoIds = vehiculos.map((v) => v._id);
+    const vehiculoIds: Types.ObjectId[] = vehiculos.map((v) => v._id as Types.ObjectId);
 
     if (vehiculoIds.length === 0) {
       return {
-        titularId,
+        titularId: objectIdTitular.toString(),
         deudaTotal: 0,
         cantidadActasImpagas: 0,
         vehiculosAsociados: 0,
@@ -108,7 +101,7 @@ export class PanelService {
 
     const resumen = resultado[0] || { deudaTotal: 0, cantidadActasImpagas: 0, actas: [] };
     return {
-      titularId,
+      titularId: objectIdTitular.toString(),
       vehiculosAsociados: vehiculos.length,
       deudaTotal: resumen.deudaTotal,
       cantidadActasImpagas: resumen.cantidadActasImpagas,
@@ -116,25 +109,25 @@ export class PanelService {
     };
   }
 
-  /**
-   * 3. Métricas generales del período: estados, recaudación y estadísticas
-   */
-  static async obtenerMetricasPeriodo(filtro?: FiltroPeriodo) {
-    const matchFiltro: Record<string, any> = {};
+  
+  static async obtenerMetricasPeriodo(filtro?: IFiltroPeriodo) {
+    const matchFiltroInfracciones: Record<string, any> = {};
 
     if (filtro?.fechaDesde || filtro?.fechaHasta) {
-      matchFiltro.fechaHora = {};
-      if (filtro.fechaDesde) matchFiltro.fechaHora.$gte = new Date(filtro.fechaDesde);
+      matchFiltroInfracciones.fechaHora = {};
+      if (filtro.fechaDesde) {
+        matchFiltroInfracciones.fechaHora.$gte = new Date(filtro.fechaDesde);
+      }
       if (filtro.fechaHasta) {
         const hasta = new Date(filtro.fechaHasta);
         hasta.setHours(23, 59, 59, 999);
-        matchFiltro.fechaHora.$lte = hasta;
+        matchFiltroInfracciones.fechaHora.$lte = hasta;
       }
     }
 
-    // A. Actas agrupadas por estado con conteo y montos
-    const agrupadoEstado = await InfraccionModel.aggregate([
-      { $match: matchFiltro },
+    // A. Actas agrupadas por estado (conteo y monto acumulado)
+    const actasPorEstado = await InfraccionModel.aggregate([
+      { $match: matchFiltroInfracciones },
       {
         $group: {
           _id: '$estado',
@@ -144,23 +137,27 @@ export class PanelService {
       },
     ]);
 
-    // B. Recaudación real cobrada desde la entidad Pago
-    const filtroPagos: Record<string, any> = { estado: 'completado' };
+    // B. Recaudación real cobrada desde la entidad Pago (solo completados, no anulados)
+    const matchFiltroPagos: Record<string, any> = { estado: 'completado' };
+
     if (filtro?.fechaDesde || filtro?.fechaHasta) {
-      filtroPagos.fechaPago = {};
-      if (filtro.fechaDesde) filtroPagos.fechaPago.$gte = new Date(filtro.fechaDesde);
+      matchFiltroPagos.fechaPago = {};
+      if (filtro.fechaDesde) {
+        matchFiltroPagos.fechaPago.$gte = new Date(filtro.fechaDesde);
+      }
       if (filtro.fechaHasta) {
         const hastaPago = new Date(filtro.fechaHasta);
         hastaPago.setHours(23, 59, 59, 999);
-        filtroPagos.fechaPago.$lte = hastaPago;
+        matchFiltroPagos.fechaPago.$lte = hastaPago;
       }
     }
 
+    // Desglose exclusivamente para medios de cobro digitales
     const recaudacionPorMedio = await PagoModel.aggregate([
-      { $match: filtroPagos },
+      { $match: matchFiltroPagos },
       {
         $group: {
-          _id: '$medioPago',
+          _id: '$medioPago', // Agrupa por 'tarjeta' y 'billetera_virtual'
           totalCobrado: { $sum: '$montoTotalAbonado' },
           transacciones: { $sum: 1 },
         },
@@ -171,7 +168,7 @@ export class PanelService {
 
     // C. Top 5 Faltas más recurrentes
     const topFaltas = await InfraccionModel.aggregate([
-      { $match: matchFiltro },
+      { $match: matchFiltroInfracciones },
       {
         $group: {
           _id: '$tipoFalta',
@@ -183,9 +180,9 @@ export class PanelService {
       { $limit: 5 },
     ]);
 
-    // D. Puntos de la ciudad con más infracciones
+    // D. Puntos críticos con mayor concentración de faltas
     const zonasCriticas = await InfraccionModel.aggregate([
-      { $match: matchFiltro },
+      { $match: matchFiltroInfracciones },
       {
         $group: {
           _id: '$lugar',
@@ -197,7 +194,7 @@ export class PanelService {
     ]);
 
     return {
-      actasPorEstado: agrupadoEstado,
+      actasPorEstado,
       recaudacion: {
         totalRecaudado,
         desglosePorMedio: recaudacionPorMedio,
