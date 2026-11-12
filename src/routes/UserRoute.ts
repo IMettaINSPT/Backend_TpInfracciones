@@ -1,22 +1,22 @@
-// src/routes/user.routes.ts
 import { Router } from 'express';
 import {
   crearUsuario,
   listarUsuarios,
+  obtenerUsuarioPorId,
+  actualizarPerfilUsuario,
   eliminarUsuario,
-  actualizarRolUsuario,
 } from '../controller/UserController';
-import { requireAuth} from '../middleware/requireAuth';
-import { requireAdminRole } from '../middleware/roleCheck';
+import { requireAuth } from '../middleware/requireAuth';
+import { requirePermission } from '../middleware/roleCheck';
 
 const router = Router();
 
-// Todas las rutas de administración de usuarios exigen ser admin
-router.use(requireAuth, requireAdminRole);
+router.use(requireAuth, requirePermission('usuarios:gestionar'));
 
 router.post('/', crearUsuario);
 router.get('/', listarUsuarios);
-router.patch('/:id/role', actualizarRolUsuario);
+router.get('/:id', obtenerUsuarioPorId);
+router.patch('/:id/perfil', actualizarPerfilUsuario); // <-- Endpoint para cambiarle el rol/perfil al usuario
 router.delete('/:id', eliminarUsuario);
 
 export default router;

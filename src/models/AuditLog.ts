@@ -6,7 +6,8 @@ const auditLogSchema = new Schema<IAuditLog>(
     entidad: {
       type: String,
       required: true,
-      enum: ['Usuario', 'User', 'Titular', 'Vehiculo', 'Infraccion', 'Pago'],
+      //permiso no se audita porque es un catalogo
+      enum: ['Usuario', 'User', 'Titular', 'Vehiculo', 'Infraccion', 'Pago', 'Perfil'],
     },
     entidadId: { type: String, required: true, trim: true },
     accion: {

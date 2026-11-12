@@ -2,27 +2,23 @@ import { Router } from 'express';
 import {
   createVehiculo,
   getVehiculos,
+  getVehiculoByPatente,
   getVehiculoById,
   updateVehiculo,
   addTitularVehiculo,
   deleteVehiculo,
-  getVehiculoByPatente
 } from '../controller/vehiculoController';
 import { requireAuth } from '../middleware/requireAuth';
-import { requireRoles } from '../middleware/roleCheck';
+import { requirePermission } from '../middleware/roleCheck';
 
 const router = Router();
 
-// Consultas de lectura: abiertas a todos los roles
-router.get('/', requireAuth, getVehiculos);
-router.get('/:id', requireAuth, getVehiculoById);
-router.get('/patente/:patente', requireAuth, getVehiculoByPatente);
-
-// Modificaciones registrales: solo personal administrativo o administradores
-router.post('/', requireAuth, requireRoles(['administrativo', 'admin']), createVehiculo);
-router.put('/:id', requireAuth, requireRoles(['administrativo', 'admin']), updateVehiculo);
-router.post('/:id/titulares', requireAuth, requireRoles(['administrativo', 'admin']), addTitularVehiculo);
-router.delete('/:id', requireAuth, requireRoles(['administrativo', 'admin']), deleteVehiculo);
-
+router.get('/patente/:patente', requireAuth, requirePermission('vehiculo:ver_patente'), getVehiculoByPatente);
+router.get('/', requireAuth, requirePermission('vehiculo:ver'), getVehiculos);
+router.get('/:id', requireAuth, requirePermission('vehiculo:ver'), getVehiculoById);
+router.post('/', requireAuth, requirePermission('vehiculo:gestionar'), createVehiculo);
+router.put('/:id', requireAuth, requirePermission('vehiculo:gestionar'), updateVehiculo);
+router.post('/:id/titulares', requireAuth, requirePermission('vehiculo:gestionar'), addTitularVehiculo);
+router.delete('/:id', requireAuth, requirePermission('vehiculo:gestionar'), deleteVehiculo);
 
 export default router;

@@ -1,15 +1,38 @@
-// src/types.ts
 import { Types } from 'mongoose';
 
 // ==========================================
-// 1. Roles y Autenticación
+// 1. Permisos, Perfiles y Autenticación
 // ==========================================
-export type Role = 'inspector' | 'administrativo' | 'admin';
+export interface IPermiso {
+  _id?: Types.ObjectId;
+  codigo: string;
+  nombre: string;
+  modulo: string;
+  descripcion?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface IPerfil {
+  _id?: Types.ObjectId;
+  nombre: string;
+  descripcion?: string;
+  permisos: Types.ObjectId[]; // Referencia estricta por ObjectId a Permiso
+  esSistema?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Perfil con los permisos poblados (.populate('permisos'))
+export type PerfilCompleto = Omit<IPerfil, 'permisos'> & {
+  permisos: IPermiso[];
+};
 
 export interface UserTokenPayload {
-  id: string; // En el token JWT viaja serializado como string
+  id: string;         // En el token JWT viaja serializado como string
   email: string;
-  role: Role;
+  perfilId: string;   // _id del Perfil asignado serializado
+  permisos: string[]; // Array de _id de permisos serializados como string
 }
 
 declare global {
@@ -24,11 +47,16 @@ export interface IUser {
   _id?: Types.ObjectId;
   email: string;
   password?: string;
-  role: Role;
+  perfilId: Types.ObjectId;
   nombre: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+// Usuario con su perfil poblado (.populate('perfilId'))
+export type UserCompleto = Omit<IUser, 'perfilId'> & {
+  perfilId: IPerfil;
+};
 
 // ==========================================
 // 2. Entidad Titular
@@ -51,7 +79,7 @@ export interface ITitular {
 // 3. Entidad Vehículo
 // ==========================================
 export interface ITitularVinculado {
-  titular: Types.ObjectId; 
+  titular: Types.ObjectId;
   porcentajeTitularidad: number;
   fechaAltaRegistro: Date;
   fechaBajaRegistro?: Date;
@@ -77,14 +105,14 @@ export interface IInfraccion {
   _id?: Types.ObjectId;
   numeroActa: string;
   codigoBarras: string;
-  vehiculo: Types.ObjectId; 
+  vehiculo: Types.ObjectId;
   tipoFalta: string;
   lugar: string;
   fechaHora: Date;
   fechaPago?: Date;
   monto: number;
   estado: InfraccionEstado;
-  inspector: Types.ObjectId; 
+  inspector: Types.ObjectId;
   motivoDescargo?: string;
   urlPago?: string;
   createdAt?: Date;
@@ -135,11 +163,8 @@ export interface IPago {
   infracciones: Types.ObjectId[];
   montoTotalAbonado: number;
   medioPago: MedioPago;
-  
-  // Exclusivos según medioPago
   datosTarjeta?: IDatosTarjeta;
   datosBilletera?: IDatosBilletera;
-  
   pagador: IPagador;
   cajero: Types.ObjectId;
   fechaPago: Date;
@@ -151,24 +176,24 @@ export interface IPago {
   updatedAt?: Date;
 }
 
-// Tipo específico para cuando se ejecuta .populate() en las lecturas
 export type PagoCompleto = Omit<IPago, 'infracciones' | 'cajero' | 'anuladoPor'> & {
   infracciones: IInfraccion[];
   cajero: IUser;
   anuladoPor?: IUser;
 };
+
 // ==========================================
 // 6. Auditoría
 // ==========================================
-export type EntidadAuditable = 'Usuario' | 'User' | 'Titular' | 'Vehiculo' | 'Infraccion' | 'Pago';
+export type EntidadAuditable = 'Usuario' | 'User' | 'Perfil' | 'Permiso' | 'Titular' | 'Vehiculo' | 'Infraccion' | 'Pago';
 export type AccionAuditoria = 'CREACION' | 'MODIFICACION' | 'ELIMINACION' | 'CAMBIO_ESTADO';
 
 export interface IAuditLog {
   _id?: Types.ObjectId;
   entidad: EntidadAuditable;
-  entidadId: string;           // Se mantiene string para admitir IDs normalizados en logs
+  entidadId: string;
   accion: AccionAuditoria;
-  usuarioId: Types.ObjectId; 
+  usuarioId: Types.ObjectId;
   datosAnteriores?: object | null;
   datosNuevos?: object | null;
   motivo?: string;
@@ -181,7 +206,7 @@ export interface RegistrarAuditoriaParams {
   entidad: EntidadAuditable;
   entidadId: string;
   accion: AccionAuditoria;
-  usuarioId: Types.ObjectId; 
+  usuarioId: Types.ObjectId;
   datosAnteriores?: object | null;
   datosNuevos?: object | null;
   motivo?: string;
@@ -192,6 +217,6 @@ export interface RegistrarAuditoriaParams {
 // 7. Panel y Métricas
 // ==========================================
 export interface IFiltroPeriodo {
-  fechaDesde?:  Date;
-  fechaHasta?:  Date;
+  fechaDesde?: Date;
+  fechaHasta?: Date;
 }

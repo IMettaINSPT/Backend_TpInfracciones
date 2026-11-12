@@ -5,7 +5,7 @@ const userSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, required: true },
-    role: { type: String, required: true, enum: ['inspector', 'administrativo', 'admin'] },
+    perfilId: { type: Schema.Types.ObjectId, ref: 'Perfil', required: true },
     nombre: { type: String, required: true, trim: true },
   },
   { timestamps: true }

@@ -14,7 +14,6 @@ const getIdentifieres = (monto: number) => {
   return { numeroActa, codigoBarras };
 };
 
-// 1. POST /infracciones -> Labrar Acta (Exclusivo inspectores)
 export const generarInfraccion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { vehiculo, tipoFalta, lugar, monto, fechaHora } = req.body || {};
@@ -80,8 +79,6 @@ export const generarInfraccion = async (req: Request, res: Response, next: NextF
     next(error);
   }
 };
-
-// 2. PUT /infracciones/:id/descargo -> Presentar Descargo (Exclusivo administrativo)
 export const generarDescargo = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -132,8 +129,6 @@ export const generarDescargo = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
-
-// 3. PUT /infracciones/:id/anular -> Anulación de Acta (Exclusivo administrativo)
 export const anularInfraccion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -179,8 +174,6 @@ export const anularInfraccion = async (req: Request, res: Response, next: NextFu
     next(error);
   }
 };
-
-// 4. GET /infracciones/:id -> Detalle del acta por ID
 export const obtenerInfraccionPorId = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -208,8 +201,6 @@ export const obtenerInfraccionPorId = async (req: Request, res: Response, next: 
     next(error);
   }
 };
-
-// 5. GET /infracciones/codigo/:codigo -> Búsqueda rápida por código de barras
 export const obtenerInfraccionPorCodigoBarras = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const codigoParam = req.params.codigo;
@@ -238,8 +229,6 @@ export const obtenerInfraccionPorCodigoBarras = async (req: Request, res: Respon
     next(error);
   }
 };
-
-// 6. GET /infracciones -> Listado general con filtros opcionales (estado / vehículo)
 export const listarInfracciones = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { estado, vehiculo } = req.query;

@@ -69,7 +69,6 @@ export const createVehiculo = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
-
 export const getVehiculos = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { busqueda, marca } = req.query;
@@ -95,7 +94,6 @@ export const getVehiculos = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
-
 export const getVehiculoByPatente = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { patente } = req.params as { patente: string };
@@ -129,7 +127,6 @@ export const getVehiculoByPatente = async (req: Request, res: Response, next: Ne
     next(error);
   }
 };
-
 export const getVehiculoById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params as { id: string };
@@ -152,7 +149,6 @@ export const getVehiculoById = async (req: Request, res: Response, next: NextFun
     next(error);
   }
 };
-
 export const updateVehiculo = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params as { id: string };
@@ -193,7 +189,6 @@ export const updateVehiculo = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
-
 export const addTitularVehiculo = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params as { id: string };
@@ -248,7 +243,6 @@ export const addTitularVehiculo = async (req: Request, res: Response, next: Next
     next(error);
   }
 };
-
 export const deleteVehiculo = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params as { id: string };

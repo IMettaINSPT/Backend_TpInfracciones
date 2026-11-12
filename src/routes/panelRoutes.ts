@@ -5,13 +5,12 @@ import {
   getMetricasPanel,
 } from '../controller/panelController';
 import { requireAuth } from '../middleware/requireAuth';
-import { requireRoles } from '../middleware/roleCheck';
+import { requirePermission } from '../middleware/roleCheck';
 
 const router = Router();
 
-// Accesible para administrativo y admin
-router.get('/deuda/patente/:patente', requireAuth, requireRoles(['administrativo', 'admin']), getDeudaPatente);
-router.get('/deuda/titular/:titularId', requireAuth, requireRoles(['administrativo', 'admin']), getDeudaTitular);
-router.get('/metricas', requireAuth, requireRoles(['administrativo', 'admin']), getMetricasPanel);
+router.get('/deuda/patente/:patente', requireAuth, requirePermission('deuda:consultar'), getDeudaPatente);
+router.get('/deuda/titular/:titularId', requireAuth, requirePermission('deuda:consultar'), getDeudaTitular);
+router.get('/metricas', requireAuth, requirePermission('panel:ver'), getMetricasPanel);
 
 export default router;

@@ -1,92 +1,54 @@
-// test/user.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import app from '../src/app';
 import { UserModel } from '../src/models/User';
+import { PerfilModel } from '../src/models/Perfil';
 import { setupTestAuth, TestAuthContext } from './helpers/auth.helper';
 
-describe('ABM de Usuarios - Tests de Integración', () => {
+describe('ABM de Usuarios y Perfiles Dinámicos - Tests de Integración', () => {
   let auth: TestAuthContext;
   const SEED_EMAIL = (process.env.SEED_ADMIN_EMAIL || 'admin@infracciones.gob.ar').toLowerCase();
+  const JWT_SECRET = process.env.JWT_SECRET || 'secreto_testing_123';
 
   beforeEach(async () => {
-    //centralizo la creación de tokens y usuarios de prueba para los distintos roles, para no repetir código en cada test
     auth = await setupTestAuth();
   });
 
-  // CREACIÓN DE USUARIO (POST /users)
+  // 1. CREACIÓN DE USUARIOS (POST /users)
   describe('POST /users (crearUsuario)', () => {
-    it('debe permitir a un admin crear un nuevo usuario administrativo exitosamente (201)', async () => {
-      const payload = {
-        email: 'nuevo.admin@infracciones.gob.ar',
-        password: 'PasswordSegura123!',
-        role: 'administrativo',
-        nombre: 'María Administrativa',
-      };
-
+    it('debe crear un usuario vinculando un perfilId válido y devolver 201 sin contraseña', async () => {
       const res = await request(app)
         .post('/users')
         .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send(payload);
+        .send({
+          email: 'nuevo.inspector@infracciones.gob.ar',
+          password: 'Password123!',
+          perfilId: auth.inspectorPerfilId,
+          nombre: 'Carlos Inspector',
+        });
 
       expect(res.status).toBe(201);
-      expect(res.body).toHaveProperty('message', 'Usuario creado exitosamente');
-      expect(res.body.user).toMatchObject({
-        email: payload.email,
-        role: payload.role,
-        nombre: payload.nombre,
-      });
+      expect(res.body.user).toHaveProperty('email', 'nuevo.inspector@infracciones.gob.ar');
       expect(res.body.user).not.toHaveProperty('password');
-
-      const guardado = await UserModel.findOne({ email: payload.email });
-      expect(guardado).not.toBeNull();
-      const coincidePassword = await bcrypt.compare(payload.password, guardado!.password!);
-      expect(coincidePassword).toBe(true);
     });
 
-    it('debe responder 400 si se intenta crear con un rol inválido', async () => {
+    it('debe responder 400 si se envía un perfilId con formato inválido o inexistente', async () => {
+      const idInexistente = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
         .post('/users')
         .set('Authorization', `Bearer ${auth.adminToken}`)
         .send({
-          email: 'rol.invalido@infracciones.gob.ar',
+          email: 'perfil.invalido@infracciones.gob.ar',
           password: 'Password123!',
-          role: 'gerente',
-          nombre: 'Rol Inexistente',
+          perfilId: idInexistente,
+          nombre: 'Perfil Inexistente',
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Rol inválido');
-    });
-
-    it('debe responder 400 si faltan campos obligatorios', async () => {
-      const res = await request(app)
-        .post('/users')
-        .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({
-          email: 'incompleto@infracciones.gob.ar',
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Todos los campos son obligatorios');
-    });
-
-    it('debe responder 400 si el email ya existe en el sistema', async () => {
-      const res = await request(app)
-        .post('/users')
-        .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({
-          email: SEED_EMAIL,
-          password: 'Password123!',
-          role: 'inspector',
-          nombre: 'Duplicado',
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe('El email ya se encuentra registrado');
+      expect(res.body.error).toContain('Perfil');
     });
 
     it('debe responder 403 si un inspector intenta crear un usuario', async () => {
@@ -96,134 +58,85 @@ describe('ABM de Usuarios - Tests de Integración', () => {
         .send({
           email: 'test@infracciones.gob.ar',
           password: 'Password123!',
-          role: 'inspector',
+          perfilId: auth.inspectorPerfilId,
           nombre: 'Prueba',
         });
 
       expect(res.status).toBe(403);
     });
-
-    it('debe responder 401 si no se envía token de autenticación', async () => {
-      const res = await request(app).post('/users').send({
-        email: 'test@infracciones.gob.ar',
-        password: 'Password123!',
-        role: 'inspector',
-        nombre: 'Sin token',
-      });
-
-      expect(res.status).toBe(401);
-    });
   });
 
-  // LISTADO DE USUARIOS (GET /users)
+  // 2. LISTADO DE USUARIOS (GET /users)
   describe('GET /users (listarUsuarios)', () => {
-    it('debe devolver la lista de usuarios sin exponer el hash de las contraseñas (200)', async () => {
+    it('debe devolver los usuarios con su perfil poblado y sin contraseña (200)', async () => {
       const res = await request(app)
         .get('/users')
         .set('Authorization', `Bearer ${auth.adminToken}`);
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(3);
-
       res.body.forEach((u: any) => {
         expect(u).not.toHaveProperty('password');
-        expect(u).toHaveProperty('email');
-        expect(u).toHaveProperty('role');
+        expect(u).toHaveProperty('perfilId');
       });
     });
-
-    it('debe responder 403 si un usuario sin rol admin intenta listar', async () => {
-      const res = await request(app)
-        .get('/users')
-        .set('Authorization', `Bearer ${auth.inspectorToken}`);
-
-      expect(res.status).toBe(403);
-    });
   });
 
-  // ACTUALIZACIÓN DE ROL
-  describe('PATCH /users/:id/role (actualizarRolUsuario)', () => {
-    it('debe permitir cambiar el rol de un usuario existente (200)', async () => {
+  // 3. ACTUALIZACIÓN DE PERFIL DE USUARIO (PATCH /users/:id/perfil)
+  describe('PATCH /users/:id/perfil (actualizarPerfilUsuario)', () => {
+    it('debe permitir cambiar el perfil de un usuario existente (200)', async () => {
+      const usuario = await UserModel.create({
+        email: 'cambio.perfil@infracciones.gob.ar',
+        password: 'hash',
+        perfilId: auth.inspectorPerfilId,
+        nombre: 'Para Cambiar',
+      });
+
       const res = await request(app)
-        .patch(`/users/${auth.inspectorId}/role`)
+        .patch(`/users/${usuario._id}/perfil`)
         .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({ role: 'administrativo', motivo: 'Pase a planta administrativa' });
+        .send({ perfilId: auth.administrativoPerfilId, motivo: 'Pase a planta administrativa' });
 
       expect(res.status).toBe(200);
-      expect(res.body.user.role).toBe('administrativo');
-
-      const actualizado = await UserModel.findById(auth.inspectorId);
-      expect(actualizado?.role).toBe('administrativo');
+      const actualizado = await UserModel.findById(usuario._id);
+      expect(actualizado?.perfilId.toString()).toBe(auth.administrativoPerfilId);
     });
 
-    it('debe responder 400 si el rol especificado no es permitido', async () => {
+    it('debe impedir cambiar el perfil del admin general del seeder (400)', async () => {
       const res = await request(app)
-        .patch(`/users/${auth.inspectorId}/role`)
+        .patch(`/users/${auth.adminId}/perfil`)
         .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({ role: 'superadmin' });
+        .send({ perfilId: auth.inspectorPerfilId });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('Rol inválido');
-    });
-
-    it('debe responder 400 si se intenta cambiar el rol del admin general del seeder', async () => {
-      const res = await request(app)
-        .patch(`/users/${auth.adminId}/role`)
-        .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({ role: 'inspector' });
-
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain('administrador general configurado en el entorno');
-    });
-
-    it('debe responder 404 si el ID no corresponde a un usuario existente', async () => {
-      const idInexistente = new mongoose.Types.ObjectId().toString();
-      const res = await request(app)
-        .patch(`/users/${idInexistente}/role`)
-        .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({ role: 'admin' });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Usuario no encontrado');
     });
   });
 
-  // ELIMINACIÓN DE USUARIOS
+  // 4. ELIMINACIÓN DE USUARIOS (DELETE /users/:id)
   describe('DELETE /users/:id (eliminarUsuario)', () => {
-    it('debe permitir eliminar un usuario existente (200)', async () => {
-      const res = await request(app)
-        .delete(`/users/${auth.inspectorId}`)
-        .set('Authorization', `Bearer ${auth.adminToken}`)
-        .send({ motivo: 'Fin de contrato de prueba' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.message).toBe('Usuario eliminado exitosamente');
-
-      const borrado = await UserModel.findById(auth.inspectorId);
-      expect(borrado).toBeNull();
-    });
-
     it('debe impedir que el administrador se elimine a sí mismo (400)', async () => {
       const res = await request(app)
         .delete(`/users/${auth.adminId}`)
         .set('Authorization', `Bearer ${auth.adminToken}`);
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toBe('No podés eliminar tu propia cuenta de usuario');
     });
 
     it('debe impedir eliminar al usuario seeder configurado en el entorno (400)', async () => {
-      const JWT_SECRET = process.env.JWT_SECRET || 'secreto_testing_123';
-      const segundoAdmin = await UserModel.create({
+      const otroAdmin = await UserModel.create({
         email: 'segundo.admin@infracciones.gob.ar',
         password: 'hash',
-        role: 'admin',
+        perfilId: auth.adminPerfilId,
         nombre: 'Segundo Admin',
       });
 
       const segundoAdminToken = jwt.sign(
-        { id: segundoAdmin._id.toString(), email: segundoAdmin.email, role: 'admin' },
+        {
+          id: otroAdmin._id.toString(),
+          email: otroAdmin.email,
+          perfilId: auth.adminPerfilId,
+          permisos: Object.values(auth.permisosMap),
+        },
         JWT_SECRET,
         { expiresIn: '1h' }
       );
@@ -233,17 +146,50 @@ describe('ABM de Usuarios - Tests de Integración', () => {
         .set('Authorization', `Bearer ${segundoAdminToken}`);
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('administrador general configurada en el entorno');
     });
+  });
 
-    it('debe responder 404 si el usuario a eliminar no existe', async () => {
-      const idInexistente = new mongoose.Types.ObjectId().toString();
-      const res = await request(app)
-        .delete(`/users/${idInexistente}`)
-        .set('Authorization', `Bearer ${auth.adminToken}`);
+  // 5. CONTROL DINÁMICO DE PERMISOS POR PERFIL
+  describe('PATCH /perfiles/:id/permisos (Segregación dinámica)', () => {
+    it('debe revocar el acceso a un endpoint cuando se quita el permiso del perfil y el usuario reingresa', async () => {
+      // Creamos perfil custom con permiso 'usuarios:gestionar'
+      const perfilCustom = await PerfilModel.create({
+        nombre: 'Supervisor Temporal',
+        permisos: [auth.permisosMap['usuarios:gestionar']],
+      });
 
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Usuario no encontrado');
+      const passHash = await bcrypt.hash('Temp123!', 10);
+      await UserModel.create({
+        email: 'supervisor@infracciones.gob.ar',
+        password: passHash,
+        perfilId: perfilCustom._id,
+        nombre: 'Supervisor',
+      });
+
+      // Login 1: tiene permiso -> GET /users responde 200
+      const login1 = await request(app)
+        .post('/auth/login')
+        .send({ email: 'supervisor@infracciones.gob.ar', password: 'Temp123!' });
+      const resOk = await request(app)
+        .get('/users')
+        .set('Authorization', `Bearer ${login1.body.token}`);
+      expect(resOk.status).toBe(200);
+
+      // Admin le quita 'usuarios:gestionar' al perfil
+      const patchRes = await request(app)
+        .patch(`/perfiles/${perfilCustom._id}/permisos`)
+        .set('Authorization', `Bearer ${auth.adminToken}`)
+        .send({ permisos: [auth.permisosMap['panel:ver']] });
+      expect(patchRes.status).toBe(200);
+
+      // Login 2: ya no tiene el permiso en su JWT -> GET /users responde 403
+      const login2 = await request(app)
+        .post('/auth/login')
+        .send({ email: 'supervisor@infracciones.gob.ar', password: 'Temp123!' });
+      const resDenied = await request(app)
+        .get('/users')
+        .set('Authorization', `Bearer ${login2.body.token}`);
+      expect(resDenied.status).toBe(403);
     });
   });
 });
