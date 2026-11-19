@@ -6,8 +6,11 @@ import { beforeAll, afterAll, afterEach } from 'vitest';
 let mongo: MongoMemoryServer;
 
 beforeAll(async () => {
-  // Le damos hasta 60s para descargar/iniciar el binario en Windows
-  mongo = await MongoMemoryServer.create();
+  mongo = await MongoMemoryServer.create({
+    instance: {
+      launchTimeout: 60000, // Amplía el límite interno de 10s a 60s
+    },
+  });
   const uri = mongo.getUri();
 
   process.env.MONGO_URI = uri;
